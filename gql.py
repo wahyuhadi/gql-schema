@@ -1,7 +1,8 @@
 import requests
 import json 
 import argparse
-
+from graphql import print_schema
+from graphql import build_client_schema
 
 
 # for api graphql instropection 
@@ -18,7 +19,7 @@ def IntrospectionQuery(endpoint, filename):
     }
 
     # Post Request Query for grab schema IntrospectionQuery
-    body ={"query": "query IntrospectionQuery {__schema {queryType { name },mutationType { name },subscriptionType { name },types {...FullType},directives {name,description,args {...InputValue},onOperation,onFragment,onField}}}\nfragment FullType on __Type {kind,name,description,fields(includeDeprecated: true) {name,description,args {...InputValue},type {...TypeRef},isDeprecated,deprecationReason},inputFields {...InputValue},interfaces {...TypeRef},enumValues(includeDeprecated: true) {name,description,isDeprecated,deprecationReason},possibleTypes {...TypeRef}}\nfragment InputValue on __InputValue {name,description,type { ...TypeRef },defaultValue}\nfragment TypeRef on __Type {kind,name,ofType {kind,name,ofType {kind,name,ofType {kind,name}}}}"}
+    body ={"query": "query IntrospectionQuery {__schema {queryType { name },mutationType { name },subscriptionType { name },types {...FullType},directives {name,description,args {...InputValue},onOperation,onFragment,onField,locations}}}\nfragment FullType on __Type {kind,name,description,fields(includeDeprecated: true) {name,description,args {...InputValue},type {...TypeRef},isDeprecated,deprecationReason},inputFields {...InputValue},interfaces {...TypeRef},enumValues(includeDeprecated: true) {name,description,isDeprecated,deprecationReason},possibleTypes {...TypeRef}}\nfragment InputValue on __InputValue {name,description,type { ...TypeRef },defaultValue}\nfragment TypeRef on __Type {kind,name,ofType {kind,name,ofType {kind,name,ofType {kind,name}}}}"}
     data = requests.post(url, headers=headers, json=body)
     status =  data.status_code
     
@@ -28,13 +29,26 @@ def IntrospectionQuery(endpoint, filename):
 
     if (status == 200) :
         print ("[+] IntrospectionQuery Allowed ")
-        print ("[+] Saving  IntrospectionQuery to folder output .. ")
 
+        print ("[+] Saving  IntrospectionQuery to folder output .. ")
         save = (json.loads(data.text))
         filename_saved = 'output/'+filename+".json"
         with open (filename_saved, 'w') as outfile:
             json.dump(save, outfile)
         print ("[+] __schema saved in ", filename_saved)
+
+        # Convert to client schema
+        instropection = json.loads(data.text)
+        client_schema = build_client_schema(instropection['data'])
+        _schema = print_schema(client_schema)
+
+        print (_schema)
+        print ("[+] Saving  client_schema to folder output ..")
+
+        client_schema_saved = 'output/'+filename+".schema"
+        with open (client_schema_saved, 'w') as file:
+            file.write(_schema)
+        print ("[+] client_schema  saved in ", client_schema_saved)
 
 def main():
     parser = argparse.ArgumentParser()
